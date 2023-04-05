@@ -2,3 +2,6 @@
 # create subnets and route tables
 # Create IGW and attach to vpc
 # Create SG
+# enable vpc peering
+# Create NAT gateway
+# Create vpc endpoint
