@@ -1,0 +1,42 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  EksCluster:
+    Type: AWS::EKS::Cluster
+    Properties:
+      Name: MyEksCluster
+      RoleArn: <your_EKS_cluster_role_Arn>
+      Version: '1.16'
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - <your_security_group_id>
+        SubnetIds:
+          - <your_subnet_id_1>
+          - <your_subnet_id_2>
+          - <your_subnet_id_3>
+          
+  NodeGroup:
+    Type: 'AWS::EKS::Nodegroup'
+    Properties:
+      ClusterName: !Ref EksCluster
+      NodeRole: <your_node_instance_role_Arn>
+      Subnets:
+        - <your_subnet_id_1>
+        - <your_subnet_id_2>
+        - <your_subnet_id_3>
+      ScalingConfig:
+        DesiredSize: 2
+        MaxSize: 2
+        MinSize: 2
+      InstanceTypes:
+        - t3.small
+      Tags:
+        - Key: Name
+          Value: MyEksNodeGroup
+      AmiType: AL2_x86_64
+
+Outputs:
+  ClusterName:
+    Value: !Ref EksCluster
+```
