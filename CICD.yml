@@ -1,0 +1,42 @@
+---
+- name: Setup CI/CD Pipeline
+  hosts: your_cicd_server
+  become: true
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - git
+          - python3-pip
+          - docker.io
+        state: latest
+      
+    - name: Clone application git repository
+      git:
+        repo: your_app_git_repository_url
+        dest: /opt/your_app_directory
+        version: your_app_git_branch
+    
+    - name: Install Python requirements
+      pip:
+        requirements: /opt/your_app_directory/requirements.txt
+    
+    - name: Build Docker image
+      docker_image:
+        build:
+          path: /opt/your_app_directory
+          rm: true
+          pull: true
+          force_rm: true
+        name: your_app_image_name
+        tag: latest
+    
+    - name: Deploy Docker container
+      docker_container:
+        name: your_app_container_name
+        image: your_app_image_name:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
