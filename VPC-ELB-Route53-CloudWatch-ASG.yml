@@ -1,0 +1,126 @@
+---
+- name: Create VPC, ELB, Route53, CloudWatch, and Auto Scaling
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    region: "us-east-1"
+
+  tasks:
+
+  - name: Create VPC
+    ec2_vpc_net:
+      name: my-vpc
+      cidr_block: "10.0.0.0/16"
+      region: "{{ region }}"
+      state: present
+    register: vpc
+
+  - name: Create Internet Gateway
+    ec2_vpc_igw:
+      vpc_id: "{{ vpc.id }}"
+      region: "{{ region }}"
+      state: present
+    register: igw
+
+  - name: Create Route Table
+    ec2_vpc_route_table:
+      vpc_id: "{{ vpc.id }}"
+      name: my-route-table
+      region: "{{ region }}"
+      state: present
+    register: route_table
+
+  - name: Create Subnet
+    ec2_vpc_subnet:
+      vpc_id: "{{ vpc.id }}"
+      cidr: "10.0.0.0/24"
+      az: "{{ region }}a"
+      state: present
+    register: subnet
+
+  - name: Associate Subnet with Route Table
+    ec2_vpc_subnet_route_table:
+      subnet_id: "{{ subnet.id }}"
+      route_table_id: "{{ route_table.id }}"
+      region: "{{ region }}"
+      state: present
+
+  - name: Add Internet Gateway to Route Table
+    ec2_vpc_route:
+      route_table_id: "{{ route_table.id }}"
+      dest: "0.0.0.0/0"
+      gateway_id: "{{ igw.id }}"
+      region: "{{ region }}"
+      state: present
+
+  - name: Create Security Group
+    ec2_group:
+      name: my-security-group
+      description: "Allow HTTP and SSH traffic"
+      vpc_id: "{{ vpc.id }}"
+      region: "{{ region }}"
+      authorize:
+        - { proto: tcp, from_port: 22, to_port: 22, cidr_ip: 0.0.0.0/0 }
+        - { proto: tcp, from_port: 80, to_port: 80, cidr_ip: 0.0.0.0/0 }
+      state: present
+    register: security_group
+
+  - name: Create Load Balancer
+    ec2_elb_lb:
+      name: my-lb
+      zone: "{{ region }}a"
+      security_group: "{{ security_group.group_id }}"
+      listeners:
+        - { protocol: http, lb_port: 80, instance_port: 80 }
+      region: "{{ region }}"
+      subnets:
+        - "{{ subnet.id }}"
+      state: present
+    register: lb
+
+  - name: Create Auto Scaling Launch Configuration
+    ec2_lc:
+      name: my-lc
+      image_id: "ami-0c55b159cbfafe1f0"
+      instance_type: t2.micro
+      security_groups: "{{ security_group.group_id }}"
+      key_name: my-key-pair
+      region: "{{ region }}"
+      state: present
+    register: lc
+
+  - name: Create Auto Scaling Group
+    ec2_asg:
+      name: my-asg
+      launch_config_name: "{{ lc.name }}"
+      min_size: 1
+      max_size: 3
+      vpc_zone_identifier: "{{ subnet.id }}"
+      load_balancers: "{{ lb.name }}"
+      region: "{{ region }}"
+      state: present
+    register: asg
+
+  - name: Create Route53 Record Set
+    route53:
+      command: change
+      zone: my-domain.com
+      record: { name: my-lb.my-domain.com, type: CNAME, ttl: 300, value: "{{ lb.dns_name }}" }
+      state: present
+
+  - name: Create CloudWatch Alarm
+    cloudwatch_metric_alarm:
+      name: my-cw-alarm
+      metric: CPUUtilization
+      namespace: AWS/EC2
+      statistic: Average
+      comparison: ">="
+      threshold: 80
+      period: 300
+      evaluation_periods: 2
+      alarm_actions:
+        - "{{ asg.arn }}"
+      region: "{{ region }}"
+      state: present
+    register: cw_alarm
