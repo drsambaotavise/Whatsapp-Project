@@ -6,3 +6,12 @@
 # Block public access
 # Encryptions 
 # server access logging
+#Lifecycle Management
+#cross replication 
+# Create a bucket with public policy block configuration
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    public_access:
+        block_public_acls: true
+        ignore_public_acls: true

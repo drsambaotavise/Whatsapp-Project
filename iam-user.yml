@@ -3,6 +3,7 @@
 # add policies
 # change to root user
 # Make sure follow the Granular model
-# orlando wants to create IAM policy
+# orlando wants to create IAM policy to get objects
+# Use of policy generator
 # reference aws documentation on permission
 # create role

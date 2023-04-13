@@ -1,3 +1,4 @@
+#playbook
 ---
 - name: Setup CI/CD Pipeline
   hosts: your_cicd_server

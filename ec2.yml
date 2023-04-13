@@ -12,3 +12,5 @@
 # create 2 hosts node
 # ssh into all servers
 # create keypairs and copy public key to the host nodes
+# Run sudo useradd Ansible on all node
+# ssh into nodes from master usinf nodesprivate IPs
